@@ -37,12 +37,14 @@ private:
 
     bool isCollision();
     void generateFood();
+    void renderMenu();
 
     SDL_Window* window;
     SDL_Renderer* renderer;
     TTF_Font* font;
 
     bool running;
+    bool gameStarted;
     Direction dir;
     std::deque<Point> snake;
     Point food;
@@ -51,7 +53,7 @@ private:
     Uint32 lastTime, currentTime, elapsedTime;
 };
 
-SnakeGame::SnakeGame() : window(nullptr), renderer(nullptr), font(nullptr), running(false), dir(RIGHT), score(0), lastTime(0), currentTime(0), elapsedTime(0) {
+SnakeGame::SnakeGame() : window(nullptr), renderer(nullptr), font(nullptr), running(false), gameStarted(false), dir(RIGHT), score(0), lastTime(0), currentTime(0), elapsedTime(0) {
     srand(static_cast<unsigned int>(time(0)));
     init();
 }
@@ -105,6 +107,7 @@ void SnakeGame::reset() {
     dir = RIGHT;
     score = 0;
     generateFood();
+    gameStarted = false;
     running = true;
     lastTime = SDL_GetTicks();
 }
@@ -134,19 +137,24 @@ void SnakeGame::handleEvents() {
             running = false;
         }
         else if (event.type == SDL_KEYDOWN) {
-            switch (event.key.keysym.sym) {
-            case SDLK_UP:
-                if (dir != DOWN) dir = UP;
-                break;
-            case SDLK_DOWN:
-                if (dir != UP) dir = DOWN;
-                break;
-            case SDLK_LEFT:
-                if (dir != RIGHT) dir = LEFT;
-                break;
-            case SDLK_RIGHT:
-                if (dir != LEFT) dir = RIGHT;
-                break;
+            if (!gameStarted && event.key.keysym.sym == SDLK_RETURN) {
+                gameStarted = true;
+            }
+            if (gameStarted) {
+                switch (event.key.keysym.sym) {
+                case SDLK_UP:
+                    if (dir != DOWN) dir = UP;
+                    break;
+                case SDLK_DOWN:
+                    if (dir != UP) dir = DOWN;
+                    break;
+                case SDLK_LEFT:
+                    if (dir != RIGHT) dir = LEFT;
+                    break;
+                case SDLK_RIGHT:
+                    if (dir != LEFT) dir = RIGHT;
+                    break;
+                }
             }
         }
     }
@@ -183,6 +191,19 @@ void SnakeGame::update() {
     }
 }
 
+void SnakeGame::renderMenu() {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_Surface* surface = TTF_RenderText_Solid(font, "Press Enter to Start", { 255, 255, 255, 255 });
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect destRect = { SCREEN_WIDTH / 2 - surface->w / 2, SCREEN_HEIGHT / 2, surface->w, surface->h };
+    SDL_RenderCopy(renderer, texture, nullptr, &destRect);
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+
+    SDL_RenderPresent(renderer);
+}
+
 void SnakeGame::render() {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -212,8 +233,13 @@ void SnakeGame::render() {
 void SnakeGame::run() {
     while (running) {
         handleEvents();
-        update();
-        render();
+        if (!gameStarted) {
+            renderMenu();
+        }
+        else {
+            update();
+            render();
+        }
     }
 
     // Game Over screen
